@@ -397,37 +397,6 @@ fun ListScreen(
         Text("易耗品更换提醒", color = Color(0xFF6B7280), fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
         Spacer(Modifier.height(12.dp))
 
-        // 原“提醒”栏的到期提醒设置，迁移到清单页顶部
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = TealContainer)
-        ) {
-            Column(Modifier.padding(12.dp)) {
-                Text("到期自动提醒", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = Color(0xFF0F6E56))
-                Text("开启提醒的物品，临近更换时自动加入系统日历日程，由日历在当天提醒", fontSize = 12.sp, color = Color(0xFF0F6E56), modifier = Modifier.padding(top = 4.dp))
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("提前提醒", fontSize = 13.sp, color = Color(0xFF0F6E56))
-                    Row {
-                        listOf(7, 15, 30, 60).forEach { d ->
-                            val sel = vm.leadDays == d
-                            Box(
-                                Modifier.padding(start = 6.dp).clip(RoundedCornerShape(8.dp))
-                                    .background(if (sel) MaterialTheme.colorScheme.primary else Color.White)
-                                    .clickable { vm.updateLeadDays(d) }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) { Text("${d}天", color = if (sel) Color.White else Color(0xFF6B7280), fontSize = 12.sp) }
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             (listOf("全部") + locations).forEach { l ->
                 val sel = l == loc
@@ -812,6 +781,8 @@ fun DetailDialog(vm: MainViewModel, itemId: Long, onDismiss: () -> Unit) {
                     }
                 }
 
+                LeadDaysCard(vm)
+
                 Spacer(Modifier.height(12.dp))
                 Text("更换历史（${wr!!.replacements.size} 次）", fontWeight = FontWeight.Medium, fontSize = 14.sp, modifier = Modifier.padding(bottom = 8.dp))
                 val sorted = wr!!.replacements.sortedBy { it.dateEpoch }
@@ -871,5 +842,37 @@ fun DetailDialog(vm: MainViewModel, itemId: Long, onDismiss: () -> Unit) {
             onConfirm = { vm.updateReplacement(editingR!!.copy(dateEpoch = it)); editingR = null },
             onDismiss = { editingR = null }
         )
+    }
+}
+
+@Composable
+fun LeadDaysCard(vm: MainViewModel) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        colors = CardDefaults.cardColors(containerColor = TealContainer)
+    ) {
+        Column(Modifier.padding(12.dp)) {
+            Text("到期自动提醒", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = Color(0xFF0F6E56))
+            Text("开启提醒的物品，临近更换时自动加入系统日历日程，由日历在当天提醒", fontSize = 12.sp, color = Color(0xFF0F6E56), modifier = Modifier.padding(top = 4.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(top = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("提前提醒", fontSize = 13.sp, color = Color(0xFF0F6E56))
+                Row {
+                    listOf(7, 15, 30, 60).forEach { d ->
+                        val sel = vm.leadDays == d
+                        Box(
+                            Modifier.padding(start = 6.dp).clip(RoundedCornerShape(8.dp))
+                                .background(if (sel) MaterialTheme.colorScheme.primary else Color.White)
+                                .clickable { vm.updateLeadDays(d) }
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
+                        ) { Text("${d}天", color = if (sel) Color.White else Color(0xFF6B7280), fontSize = 12.sp) }
+                    }
+                }
+            }
+        }
     }
 }
