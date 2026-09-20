@@ -16,7 +16,6 @@ import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Widgets
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -141,8 +140,7 @@ fun MainScreen(vm: MainViewModel = viewModel()) {
                     Text(
                         when (tab) {
                             0 -> "清单"
-                            1 -> "提醒"
-                            2 -> "统计"
+                            1 -> "统计"
                             else -> "备件"
                         }, fontWeight = FontWeight.Medium
                     )
@@ -162,10 +160,8 @@ fun MainScreen(vm: MainViewModel = viewModel()) {
                 NavigationBarItem(selected = tab == 0, onClick = { tab = 0 },
                     icon = { Icon(Icons.Filled.List, null) }, label = { Text("清单") })
                 NavigationBarItem(selected = tab == 1, onClick = { tab = 1 },
-                    icon = { Icon(Icons.Filled.Notifications, null) }, label = { Text("提醒") })
-                NavigationBarItem(selected = tab == 2, onClick = { tab = 2 },
                     icon = { Icon(Icons.Filled.BarChart, null) }, label = { Text("统计") })
-                NavigationBarItem(selected = tab == 3, onClick = { tab = 3 },
+                NavigationBarItem(selected = tab == 2, onClick = { tab = 2 },
                     icon = { Icon(Icons.Filled.Widgets, null) }, label = { Text("备件") })
             }
         },
@@ -173,7 +169,7 @@ fun MainScreen(vm: MainViewModel = viewModel()) {
             if (tab == 0) FloatingActionButton(onClick = { showAdd = true }) {
                 Icon(Icons.Filled.Add, null)
             }
-            if (tab == 3) FloatingActionButton(onClick = { showSpareAdd = true }) {
+            if (tab == 2) FloatingActionButton(onClick = { showSpareAdd = true }) {
                 Icon(Icons.Filled.Add, null)
             }
         }
@@ -193,9 +189,8 @@ fun MainScreen(vm: MainViewModel = viewModel()) {
             }
             when (tab) {
                 0 -> ListScreen(vm, items, locations) { detailId = it.item.id }
-                1 -> RemindScreen(vm, items)
-                2 -> StatsScreen(items)
-                3 -> SparePartsScreen(vm = spareVm, showAdd = showSpareAdd, onAddDismiss = { showSpareAdd = false })
+                1 -> StatsScreen(items)
+                2 -> SparePartsScreen(vm = spareVm, showAdd = showSpareAdd, onAddDismiss = { showSpareAdd = false })
             }
         }
     }
@@ -402,6 +397,37 @@ fun ListScreen(
         Text("易耗品更换提醒", color = Color(0xFF6B7280), fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp))
         Spacer(Modifier.height(12.dp))
 
+        // 原“提醒”栏的到期提醒设置，迁移到清单页顶部
+        Card(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(12.dp),
+            colors = CardDefaults.cardColors(containerColor = TealContainer)
+        ) {
+            Column(Modifier.padding(12.dp)) {
+                Text("到期自动提醒", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = Color(0xFF0F6E56))
+                Text("开启提醒的物品，临近更换时自动加入系统日历日程，由日历在当天提醒", fontSize = 12.sp, color = Color(0xFF0F6E56), modifier = Modifier.padding(top = 4.dp))
+                Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text("提前提醒", fontSize = 13.sp, color = Color(0xFF0F6E56))
+                    Row {
+                        listOf(7, 15, 30, 60).forEach { d ->
+                            val sel = vm.leadDays == d
+                            Box(
+                                Modifier.padding(start = 6.dp).clip(RoundedCornerShape(8.dp))
+                                    .background(if (sel) MaterialTheme.colorScheme.primary else Color.White)
+                                    .clickable { vm.updateLeadDays(d) }
+                                    .padding(horizontal = 10.dp, vertical = 5.dp)
+                            ) { Text("${d}天", color = if (sel) Color.White else Color(0xFF6B7280), fontSize = 12.sp) }
+                        }
+                    }
+                }
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState())) {
             (listOf("全部") + locations).forEach { l ->
                 val sel = l == loc
@@ -427,71 +453,6 @@ fun ListScreen(
             Text("这个地址下还没有记录，点右下角 + 添加", color = Color(0xFF6B7280), fontSize = 13.sp, modifier = Modifier.padding(top = 40.dp))
         }
         filtered.forEach { ItemCard(it) { onItemClick(it) } }
-    }
-}
-
-@Composable
-fun RemindScreen(vm: MainViewModel, items: List<ItemWithReplacements>) {
-    val sorted = items.filter { it.replacements.isNotEmpty() }
-        .sortedBy { nextDue(it) }
-
-    Column(
-        Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)
-    ) {
-        Text("到期提醒", fontWeight = FontWeight.Medium, fontSize = 15.sp)
-        Spacer(Modifier.height(12.dp))
-
-        Card(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(12.dp),
-            colors = CardDefaults.cardColors(containerColor = TealContainer)
-        ) {
-            Column(Modifier.padding(12.dp)) {
-                Text("到期自动提醒", fontWeight = FontWeight.Medium, fontSize = 13.sp, color = Color(0xFF0F6E56))
-                Text("临近更换时自动加入系统日历日程，由日历在当天提醒，可调整提前天数", fontSize = 12.sp, color = Color(0xFF0F6E56), modifier = Modifier.padding(top = 4.dp))
-                Row(
-                    Modifier.fillMaxWidth().padding(top = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Text("提前提醒", fontSize = 13.sp, color = Color(0xFF0F6E56))
-                    Row {
-                        listOf(7, 15, 30, 60).forEach { d ->
-                            val sel = vm.leadDays == d
-                            Box(
-                                Modifier.padding(start = 6.dp).clip(RoundedCornerShape(8.dp))
-                                    .background(if (sel) MaterialTheme.colorScheme.primary else Color.White)
-                                    .clickable { vm.updateLeadDays(d) }
-                                    .padding(horizontal = 10.dp, vertical = 5.dp)
-                            ) { Text("${d}天", color = if (sel) Color.White else Color(0xFF6B7280), fontSize = 12.sp) }
-                        }
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-
-        sorted.forEach { wr ->
-            val nxt = nextDue(wr)!!
-            val status = DateUtils.statusOf(nxt)
-            val dl = DateUtils.daysLeft(nxt)!!
-            Card(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp).clickable { },
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White)
-            ) {
-                Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Column(Modifier.weight(1f)) {
-                        Text(wr.item.name, fontWeight = FontWeight.Medium, fontSize = 14.sp)
-                        Text("${wr.item.location} · 下次 ${DateUtils.fmt(nxt)}", color = Color(0xFF6B7280), fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
-                    }
-                    Column(horizontalAlignment = Alignment.End) {
-                        Text(if (dl < 0) "已逾期 ${-dl} 天" else "还剩 $dl 天", color = statusColor(status), fontWeight = FontWeight.Medium, fontSize = 13.sp)
-                        Text(statusLabel(status), color = Color(0xFF6B7280), fontSize = 12.sp, modifier = Modifier.padding(top = 3.dp))
-                    }
-                }
-            }
-        }
     }
 }
 
@@ -650,6 +611,7 @@ fun AddItemDialog(vm: MainViewModel, locations: List<String>, onDismiss: () -> U
     var cycleUnit by remember { mutableStateOf("年") }
     var note by remember { mutableStateOf("") }
     var firstEpoch by remember { mutableStateOf(DateUtils.todayEpoch()) }
+    var remind by remember { mutableStateOf(true) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -682,6 +644,17 @@ fun AddItemDialog(vm: MainViewModel, locations: List<String>, onDismiss: () -> U
                 }
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(note, { note = it }, label = { Text("备注") }, modifier = Modifier.fillMaxWidth().height(80.dp), singleLine = false)
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().clickable { remind = !remind }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(checked = remind, onCheckedChange = { remind = it })
+                    Column(Modifier.padding(start = 8.dp)) {
+                        Text("创建日程提醒", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text("到期后加入系统日历并提醒（取消则仅在应用内显示）", color = Color(0xFF6B7280), fontSize = 12.sp)
+                    }
+                }
             }
         },
         confirmButton = {
@@ -689,7 +662,7 @@ fun AddItemDialog(vm: MainViewModel, locations: List<String>, onDismiss: () -> U
                 if (name.isNotBlank()) {
                     vm.addItem(
                         name, location.ifBlank { "未命名地址" }, category,
-                        cycleValue.toIntOrNull() ?: 1, cycleUnit, note, firstEpoch
+                        cycleValue.toIntOrNull() ?: 1, cycleUnit, note, firstEpoch, remind
                     )
                     onDismiss()
                 }
@@ -819,6 +792,23 @@ fun DetailDialog(vm: MainViewModel, itemId: Long, onDismiss: () -> Unit) {
                             dl?.let { if (it < 0) "逾期 ${-it} 天" else "剩 $it 天" } ?: "未设置",
                             color = statusColor(status), fontSize = 12.sp, modifier = Modifier.padding(top = 4.dp)
                         )
+                    }
+                }
+
+                Spacer(Modifier.height(12.dp))
+                Row(
+                    Modifier.fillMaxWidth().clickable {
+                        vm.updateItem(wr!!.item.copy(remindEnabled = !wr!!.item.remindEnabled))
+                    }.padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Checkbox(
+                        checked = wr!!.item.remindEnabled,
+                        onCheckedChange = { vm.updateItem(wr!!.item.copy(remindEnabled = it)) }
+                    )
+                    Column(Modifier.padding(start = 8.dp)) {
+                        Text("日程提醒", fontSize = 14.sp, fontWeight = FontWeight.Medium)
+                        Text("开启后临近更换会写入系统日历并提醒", color = Color(0xFF6B7280), fontSize = 12.sp)
                     }
                 }
 

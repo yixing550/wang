@@ -13,7 +13,8 @@ data class ItemEntity(
     val cycleValue: Int,
     val cycleUnit: String, // "月" or "年"
     val note: String = "",
-    val calendarEventId: Long? = null // 写入系统日历的事件 id，用于更新/删除
+    val calendarEventId: Long? = null, // 写入系统日历的事件 id，用于更新/删除
+    val remindEnabled: Boolean = true // 是否写入系统日历日程提醒
 )
 
 @Entity(
@@ -73,9 +74,13 @@ interface ItemDao {
     suspend fun allItems(): List<ItemWithReplacements>
 }
 
+val MIGRATION_5_6 = Migration(5, 6) {
+    it.execSQL("ALTER TABLE items ADD COLUMN remindEnabled INTEGER NOT NULL DEFAULT 1")
+}
+
 @Database(
     entities = [ItemEntity::class, ReplacementEntity::class, SparePartEntity::class],
-    version = 5,
+    version = 6,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -85,6 +90,7 @@ abstract class AppDatabase : RoomDatabase() {
     companion object {
         fun build(app: android.content.Context): AppDatabase =
             Room.databaseBuilder(app, AppDatabase::class.java, "consumable.db")
+                .addMigrations(MIGRATION_5_6)
                 .fallbackToDestructiveMigration()
                 .build()
     }

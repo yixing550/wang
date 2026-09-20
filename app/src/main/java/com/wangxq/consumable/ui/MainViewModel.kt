@@ -50,6 +50,12 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             val calId = CalendarReminder.pickWritableCalendarId(getApplication()) ?: return@launch
             val lead = leadDays
             repo.allItems().forEach { wr ->
+                // 仅同步开启提醒的物品
+                if (!wr.item.remindEnabled) {
+                    // 关闭提醒的物品若残留日历事件则清理
+                    wr.item.calendarEventId?.let { CalendarReminder.removeEvent(getApplication(), it) }
+                    return@forEach
+                }
                 val next = DateUtils.nextDueEpoch(
                     wr.item.cycleValue, wr.item.cycleUnit, wr.replacements.map { it.dateEpoch }
                 ) ?: return@forEach
@@ -83,7 +89,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         cycleValue: Int,
         cycleUnit: String,
         note: String,
-        firstEpoch: Long
+        firstEpoch: Long,
+        remindEnabled: Boolean
     ) {
         viewModelScope.launch {
             repo.insertItemWithFirst(
@@ -93,7 +100,8 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     category = category,
                     cycleValue = cycleValue,
                     cycleUnit = cycleUnit,
-                    note = note
+                    note = note,
+                    remindEnabled = remindEnabled
                 ),
                 firstEpoch
             )
