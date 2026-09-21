@@ -91,7 +91,7 @@ abstract class AppDatabase : RoomDatabase() {
         fun build(app: android.content.Context): AppDatabase =
             Room.databaseBuilder(app, AppDatabase::class.java, "consumable.db")
                 .addMigrations(MIGRATION_5_6)
-                .fallbackToDestructiveMigration()
+                .fallbackToDestructiveMigrationOnDowngrade()
                 .build()
     }
 }
